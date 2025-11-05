@@ -1,10 +1,13 @@
 import asyncio
 from playwright.async_api import async_playwright
 from playwright._impl._errors import TimeoutError as PlaywrightTimeoutError
-
+import os
+from dotenv import load_dotenv
 from pymongo import MongoClient
 
-CONNECTION_STRING = "mongodb+srv://arinacellznam_db_user:c9sEO0Sq7YnHmYaw@cluster0.mkihtse.mongodb.net/?appName=Cluster0"
+load_dotenv()
+
+CONNECTION_STRING = os.environ.get("DB_CONNECTION_STRING")
 
 client = MongoClient(CONNECTION_STRING)
 
