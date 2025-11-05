@@ -8,7 +8,7 @@ async def scrape_rozetka():
     scraped_data = []
 
     async with async_playwright() as p:
-        # --- CHANGE 1: Run in background ---
+
         browser = await p.chromium.launch(headless=True)
         page = await browser.new_page()
 
@@ -19,7 +19,7 @@ async def scrape_rozetka():
         path = "https://rozetka.com.ua/"
         await page.goto(path)
 
-        # 1. Close banners (if they exist)
+
         try:
             await page.click('[data-testid="cookie-banner-close"]', timeout=3000)
             print("Closed cookie banner.")
@@ -32,12 +32,12 @@ async def scrape_rozetka():
         except Exception as e:
             print("City pop-up not found, continuing.")
 
-        # The search text itself remains in Ukrainian, as this is what we type
+
         await page.fill('[name="search"]', 'навушники')
         print("Clicking 'Search' button...")
         await page.click('[data-testid="search-suggest-submit"]')
 
-        # 3. Wait for navigation
+
         print("Waiting for navigation to /headphones/ page...")
         await page.wait_for_url("**/headphones/**", timeout=60000)
         print("Successfully navigated to results page!")
@@ -51,11 +51,10 @@ async def scrape_rozetka():
         product_cards = await page.locator(product_card_selector).all()
         print(f"Found {len(product_cards)} items (products and ads) on the page.")
 
-        # --- MAIN SCRAPING LOOP ---
+
         for card in product_cards:
             try:
-                # --- CHANGE 2: Add 2-second timeout ---
-                # If this is an ad, we won't wait 30 seconds
+
                 title_element = card.locator("a.tile-title")
                 price_element = card.locator("rz-tile-price")
 
@@ -64,20 +63,20 @@ async def scrape_rozetka():
 
                 if title and price:
                     title_clean = title.strip()
-                    # Replace non-breaking space with a regular space
+
                     price_clean = price.strip().replace('\xa0', ' ')
 
                     print(f"TITLE: {title_clean} | PRICE: {price_clean}")
                     scraped_data.append({"title": title_clean, "price": price_clean})
                 else:
-                    # This will trigger if text_content() returns None or empty string
+
                     print("Skipping card (no title or price).")
 
             except PlaywrightTimeoutError:
-                # This will trigger if the locator isn't found in 2 seconds
+
                 print("Skipping (most likely an ad) - TimeoutError")
             except Exception as e:
-                # Other potential errors
+
                 print(f"Failed to parse card: {e}")
 
         await browser.close()
