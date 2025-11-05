@@ -2,6 +2,17 @@ import asyncio
 from playwright.async_api import async_playwright
 from playwright._impl._errors import TimeoutError as PlaywrightTimeoutError
 
+from pymongo import MongoClient
+
+CONNECTION_STRING = "mongodb+srv://arinacellznam_db_user:c9sEO0Sq7YnHmYaw@cluster0.mkihtse.mongodb.net/?appName=Cluster0"
+
+client = MongoClient(CONNECTION_STRING)
+
+db = client['rozetka_db']
+
+collection = db['products']
+
+print("MongoDB client created.")
 
 async def scrape_rozetka():
     print("launching scraper (headless mode)...")
@@ -18,7 +29,6 @@ async def scrape_rozetka():
 
         path = "https://rozetka.com.ua/"
         await page.goto(path)
-
 
         try:
             await page.click('[data-testid="cookie-banner-close"]', timeout=3000)
@@ -66,8 +76,13 @@ async def scrape_rozetka():
 
                     price_clean = price.strip().replace('\xa0', ' ')
 
-                    print(f"TITLE: {title_clean} | PRICE: {price_clean}")
-                    scraped_data.append({"title": title_clean, "price": price_clean})
+                    product_document = {
+                        "title": title_clean,
+                        "price": price_clean
+                    }
+                    collection.insert_one(product_document)
+                    scraped_data.append(product_document)
+
                 else:
 
                     print("Skipping card (no title or price).")
