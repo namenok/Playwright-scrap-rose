@@ -13,11 +13,11 @@ client = MongoClient(CONNECTION_STRING)
 
 db = client['scrapers_db']
 
-collection = db['rozetka_products']
+collection = db['prom_products']
 
 print("MongoDB client created.")
 
-async def scrape_rozetka():
+async def scrape_prom():
     print("launching scraper (headless mode)...")
     scraped_data = []
 
@@ -30,51 +30,34 @@ async def scrape_rozetka():
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36"
         })
 
-        path = "https://rozetka.com.ua/"
+        path = "https://prom.ua/ua/search?search_term=%D0%BD%D0%B0%D0%B2%D1%83%D1%88%D0%BD%D0%B8%D0%BA%D0%B8"
         await page.goto(path)
 
-        try:
-            await page.click('[data-testid="cookie-banner-close"]', timeout=3000)
-            print("Closed cookie banner.")
-        except Exception as e:
-            print("Cookie banner not found, continuing.")
-
-        try:
-            await page.click('[data-testid="city-confirmation-cancel"]', timeout=2000)
-            print("Closed city-confirmation pop-up.")
-        except Exception as e:
-            print("City pop-up not found, continuing.")
-
-        await page.fill('[name="search"]', 'навушники')
-        print("Clicking 'Search' button...")
-        await page.click('[data-testid="search-suggest-submit"]')
-
-        product_card_selector = "div.item"
+        product_card_selector = "[data-qaid='product_block']"
 
         print(f"Waiting for product cards to be attached ({product_card_selector})...")
         await page.wait_for_selector(product_card_selector, state='attached', timeout=60000)
         print("Product cards are ATTACHED to HTML!")
 
         product_cards = await page.locator(product_card_selector).all()
-        print(f"Found {len(product_cards)} items (products and ads) on the page.")
+        print(f"Found {len(product_cards)} items on the page.")
 
         for card in product_cards:
             try:
-                title_element = card.locator("a.tile-title")
-                price_element = card.locator("rz-tile-price")
+                title_element = card.locator("[data-qaid='product_name']")
+                price_element = card.locator("[data-qaid='product_price']")
 
                 title = await title_element.text_content(timeout=2000)
                 price = await price_element.text_content(timeout=2000)
 
                 if title and price:
                     title_clean = title.strip()
-
                     price_clean = price.strip().replace('\xa0', ' ')
 
                     product_document = {
                         "title": title_clean,
                         "price": price_clean,
-                        "source": "rozetka.com.ua"
+                        "source": "prom.ua"
                     }
                     collection.insert_one(product_document)
                     scraped_data.append(product_document)
@@ -92,10 +75,10 @@ async def scrape_rozetka():
 
 
 if __name__ == "__main__":
-    print("Clearing 'rozetka_products' collection...")
+    print("Clearing 'prom_products' collection...")
     collection.delete_many({})
     print("Collection cleared.")
 
-    data = asyncio.run(scrape_rozetka())
+    data = asyncio.run(scrape_prom())
     print("\n" + "=" * 20 + " RESULT " + "=" * 20)
     print(data)
